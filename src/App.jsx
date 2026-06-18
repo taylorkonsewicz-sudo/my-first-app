@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
+import DraftRoom from './DraftRoom'
+
 
 function App() {
   const [session, setSession] = useState(undefined)
@@ -13,6 +15,7 @@ function App() {
   const [teamName, setTeamName] = useState('')
   const [leagueName, setLeagueName] = useState('')
   const [screen, setScreen] = useState('dashboard')
+  const [showDraft, setShowDraft] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
 
 
@@ -457,6 +460,16 @@ function App() {
   }
 
   // Dashboard — with or without a league
+    if (showDraft) {
+    return (
+      <DraftRoom
+        session={session}
+        profile={profile}
+        league={league}
+        onDraftComplete={() => setShowDraft(false)}
+      />
+    )
+  }
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
       <h1>🏈 Sunday Funday</h1>
@@ -490,6 +503,22 @@ function App() {
           <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
             Share this code with your friends so they can join!
           </p>
+                    <button
+            onClick={() => setShowDraft(true)}
+            style={{
+              marginTop: '15px',
+              padding: '12px 24px',
+              fontSize: '16px',
+              backgroundColor: '#7c3aed',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            Enter Draft Room 🏈
+          </button>
         </div>
       ) : (
         <div style={{ marginTop: '20px' }}>
