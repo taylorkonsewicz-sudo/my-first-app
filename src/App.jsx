@@ -13,6 +13,8 @@ function App() {
   const [teamName, setTeamName] = useState('')
   const [leagueName, setLeagueName] = useState('')
   const [screen, setScreen] = useState('dashboard')
+  const [inviteCode, setInviteCode] = useState('')
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -101,6 +103,57 @@ function App() {
       setMessage('')
     }
   }
+
+  async function handleJoinLeague() {
+  if (!inviteCode) {
+    setMessage('Please enter an invite code')
+    return
+  }
+
+  // Look up the league by invite code
+  const { data: foundLeague, error: leagueError } = await supabase
+    .from('leagues')
+    .select('*')
+    .eq('invite_code', inviteCode.toUpperCase())
+    .single()
+
+  if (leagueError || !foundLeague) {
+    setMessage('Error: No league found with that invite code. Double check and try again!')
+    return
+  }
+
+  // Check if already a member
+  const { data: existingMember } = await supabase
+    .from('league_members')
+    .select('*')
+    .eq('league_id', foundLeague.id)
+    .eq('user_id', session.user.id)
+    .single()
+
+  if (existingMember) {
+    setMessage('Error: You are already in this league!')
+    return
+  }
+
+  // Join the league
+  const { error: joinError } = await supabase
+    .from('league_members')
+    .insert({
+      league_id: foundLeague.id,
+      user_id: session.user.id,
+      team_name: profile.team_name
+    })
+
+  if (joinError) {
+    setMessage('Error joining league: ' + joinError.message)
+    return
+  }
+
+  setLeague(foundLeague)
+  setScreen('dashboard')
+  setMessage('')
+}
+
 
   async function handleCreateLeague() {
     if (!leagueName) {
@@ -288,6 +341,68 @@ function App() {
     )
   }
 
+    // Join league screen
+  if (screen === 'joinLeague') {
+    return (
+      <div style={{
+        maxWidth: '400px',
+        margin: '100px auto',
+        padding: '20px',
+        fontFamily: 'sans-serif'
+      }}>
+        <h1>🏈 Sunday Funday</h1>
+        <h2>Join a League</h2>
+        <p>Enter the invite code your friend shared with you.</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input
+            type="text"
+            placeholder="Enter invite code (e.g. ABC123)"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value)}
+            style={{
+              padding: '10px',
+              fontSize: '20px',
+              borderRadius: '6px',
+              border: '1px solid #ccc',
+              letterSpacing: '4px',
+              textTransform: 'uppercase',
+              textAlign: 'center'
+            }}
+          />
+          <button
+            onClick={handleJoinLeague}
+            style={{
+              padding: '10px',
+              fontSize: '16px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Join League 🏈
+          </button>
+
+          {message && (
+            <p style={{ color: message.startsWith('Error') ? 'red' : 'green' }}>
+              {message}
+            </p>
+          )}
+
+          <p
+            onClick={() => { setScreen('dashboard'); setMessage('') }}
+            style={{ cursor: 'pointer', color: '#3b82f6', textAlign: 'center' }}
+          >
+            Back to dashboard
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+
   // Logged in, no league yet — show create league screen
   if (screen === 'createLeague') {
     return (
@@ -396,6 +511,22 @@ function App() {
           </button>
         </div>
       )}
+
+                <button
+            onClick={() => setScreen('joinLeague')}
+            style={{
+              padding: '12px 24px',
+              fontSize: '16px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Join a League
+          </button>
+
 
       <button
         onClick={() => supabase.auth.signOut()}
