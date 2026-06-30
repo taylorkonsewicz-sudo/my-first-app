@@ -70,6 +70,26 @@ useEffect(() => {
       setLeague(undefined)
     }
   }, [profile])
+  // Listen for live changes to the league (like draft starting)
+  useEffect(() => {
+    if (!league) return
+
+    const channel = supabase
+      .channel('app_league_changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'leagues',
+        filter: `id=eq.${league.id}`
+      }, (payload) => {
+        setLeague(payload.new)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [league?.id])
 
   async function handleSubmit() {
     setMessage('')
