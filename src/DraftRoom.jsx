@@ -22,11 +22,43 @@ export default function DraftRoom({ session, profile, league, onDraftComplete })
 
   const isCommissioner = league.commissioner_id === session.user.id
 
-  // Load everything when component mounts
+ // Load everything when component mounts
   useEffect(() => {
     loadPlayers()
     loadMembers()
     loadPicks()
+
+    // Listen for new picks in real time
+    const picksChannel = supabase
+      .channel('draft_picks_changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'draft_picks',
+        filter: `league_id=eq.${league.id}`
+      }, () => {
+        loadPicks()
+      })
+      .subscribe()
+
+    // Listen for league status changes (like draft starting)
+    const leagueChannel = supabase
+      .channel('league_changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'leagues',
+        filter: `id=eq.${league.id}`
+      }, (payload) => {
+        setDraftStatus(payload.new.draft_status)
+        setDraftOrder(payload.new.draft_order || [])
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(picksChannel)
+      supabase.removeChannel(leagueChannel)
+    }
   }, [])
 
   // Timer countdown
