@@ -51,20 +51,23 @@ function App() {
   }, [session])
 
   // When profile loads, check if they're in a league
-  useEffect(() => {
+useEffect(() => {
     if (profile) {
       supabase
         .from('league_members')
         .select('*, leagues(*)')
         .eq('user_id', session.user.id)
-        .single()
+        .order('joined_at', { ascending: false })
+        .limit(1)
         .then(({ data }) => {
-          if (data) {
-            setLeague(data.leagues)
+          if (data && data.length > 0) {
+            setLeague(data[0].leagues)
           } else {
             setLeague(null)
           }
         })
+    } else {
+      setLeague(undefined)
     }
   }, [profile])
 
